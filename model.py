@@ -21,49 +21,39 @@ class BeeCNN:
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
-        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv1')(img_input)
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv1')(img_input)
         x = BatchNormalization()(x)
-        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
         x = BatchNormalization()(x)
         x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
 
         # --- block 2 ---
-        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
         x = BatchNormalization()(x)
-        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
         x = BatchNormalization()(x)
         x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
 
         # --- coarse 1 branch ---
         c_1_bch = Flatten(name='c1_flatten')(x)
-        c_1_bch = Dense(256, activation='relu', name='c1_fc_1')(c_1_bch)
-        c_1_bch = BatchNormalization()(c_1_bch)
-        c_1_bch = Dropout(0.5)(c_1_bch)
-        c_1_bch = Dense(256, activation='relu', name='c1_fc2')(c_1_bch)
+        c_1_bch = Dense(64, activation='relu', name='c1_fc_1')(c_1_bch)
         c_1_bch = BatchNormalization()(c_1_bch)
         c_1_bch = Dropout(0.5)(c_1_bch)
         c_1_pred = Dense(self.num_c_1, activation='softmax', name='c1_predictions')(c_1_bch)
 
         # --- block 3 ---
-        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
         x = BatchNormalization()(x)
-        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block3_conv2')(x)
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv2')(x)
         x = BatchNormalization()(x)
         x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
 
-        # --- block 4 ---
-        x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
-        x = BatchNormalization()(x)
-        x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block4_conv2')(x)
-        x = BatchNormalization()(x)
-        x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
-
         # --- fine block ---
         x = Flatten(name='flatten')(x)
-        x = Dense(1024, activation='relu', name='fc_1')(x)
+        x = Dense(256, activation='relu', name='fc_1')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
-        x = Dense(1024, activation='relu', name='fc2')(x)
+        x = Dense(256, activation='relu', name='fc2')(x)
         x = BatchNormalization()(x)
         x = Dropout(0.5)(x)
         fine_pred = Dense(self.num_classes, activation='softmax', name='predictions')(x)
