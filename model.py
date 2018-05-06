@@ -1,18 +1,23 @@
 from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, Flatten, Dense, Dropout
 from keras.models import Model
 from keras import backend as K
+from keras import optimizers
 
 
 class BeeCNN:
     def __init__(self, num_genus, num_species):
-        self.input_shape = (256, 256)
+        img_rows, img_cols = 256, 256
+        if K.image_data_format() == 'channels_first':
+            self.input_shape = (1, img_rows, img_cols)
+        else:
+            self.input_shape = (img_rows, img_cols, 1)
         self.num_c_1 = num_genus
         self.num_classes = num_species
 
-    def model(self):
-        alpha = K.variable(value=0.99, dtype="float32", name="alpha")  # A1 in paper
-        beta = K.variable(value=0.01, dtype="float32", name="beta")  # A2 in paper
+        self.alpha = K.variable(value=0.99, dtype="float32", name="alpha")  # A1 in paper
+        self.beta = K.variable(value=0.01, dtype="float32", name="beta")  # A2 in paper
 
+    def model(self):
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
@@ -63,4 +68,13 @@ class BeeCNN:
         x = Dropout(0.5)(x)
         fine_pred = Dense(self.num_classes, activation='softmax', name='predictions')(x)
 
-        model = Model(input=img_input, output=[c_1_pred, fine_pred], name='medium_dynamic')
+        model = Model(inputs=img_input, outputs=[c_1_pred, fine_pred], name='beecnn')
+        model.summary()
+
+        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=sgd,
+                      loss_weights=[self.alpha, self.beta],
+                      # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy'])
+        return model
