@@ -66,5 +66,5 @@ class BeeCNN:
                       optimizer=sgd,
                       loss_weights=[self.alpha, self.beta],
                       # optimizer=keras.optimizers.Adadelta(),
-                      metrics=['accuracy'])
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model

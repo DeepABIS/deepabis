@@ -23,14 +23,14 @@ class LossWeightsModifier(keras.callbacks.Callback):
 
     def on_epoch_end(self, epoch, logs={}):
         if epoch == 8:
-            K.set_value(self.alpha, 0.1)
-            K.set_value(self.beta, 0.8)
+            K.set_value(self.alpha, 0.9)
+            K.set_value(self.beta, 0.1)
         if epoch == 18:
-            K.set_value(self.alpha, 0.1)
-            K.set_value(self.beta, 0.2)
+            K.set_value(self.alpha, 0.3)
+            K.set_value(self.beta, 0.7)
         if epoch == 28:
             K.set_value(self.alpha, 0)
-            K.set_value(self.beta, 0)
+            K.set_value(self.beta, 1)
 
 
 dataset = BeeDataSet(source_dir='../dataset_genus8')
@@ -44,7 +44,7 @@ batch_size = 16
 epochs = 60
 
 # file paths
-log_filepath = './logs/'
+log_filepath = './logs/run2'
 weights_store_filepath = './models/'
 train_id = '1'
 model_name = 'beenet_' + train_id + '.h5'
