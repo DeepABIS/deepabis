@@ -17,6 +17,8 @@ class BeeDataSet:
         self.num_genus = 0
         self.num_species = 0
         self.num_files = 0
+        self.genus_names = []
+        self.species_names = []
         self.x_train = np.array([])
         self.y_genus_train = np.array([])
         self.x_test = np.array([])
@@ -62,9 +64,14 @@ class BeeDataSet:
         x = []
         y_genus = []
         y_species = []
+        self.genus_names = [None] * self.num_genus
+        self.species_names = [None] * self.num_species
         with tqdm(total=self.num_files) as pbar:
             for genus in self.genera:
                 for species in self.genera[genus]:
+                    label_genus, label_species = self.get_embedding(genus, species)
+                    self.genus_names[label_genus] = genus
+                    self.species_names[label_species] = species
                     for filename in self.genera[genus][species]:
                         with open(filename, 'rb') as stream:
                             bytes = bytearray(stream.read())
@@ -73,7 +80,6 @@ class BeeDataSet:
                             img = cv2.resize(img, (256, 256))
                             img = np.float32(img)
                             img = np.reshape(img, (256, 256, 1))
-                            label_genus, label_species = self.get_embedding(genus, species)
                             x.append(img)
                             y_genus.append(label_genus)
                             y_species.append(label_species)
