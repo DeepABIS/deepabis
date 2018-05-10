@@ -36,6 +36,8 @@ class BeeDataSet:
         num_files = 0
         genera = {}
         for genus_path in glob.iglob(self.source_dir + '/*'):
+            if not os.path.isdir(genus_path):
+                continue
             genus = os.path.basename(genus_path)
             genera[genus] = {}
             for species_path in glob.iglob(genus_path + '/*'):
