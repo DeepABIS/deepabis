@@ -6,13 +6,15 @@ import pandas as pd
 import numpy as np
 import os
 
-train_id = '1'
+train_id = '2'
 
 
 def pandas_classification_report(y_true, y_pred, target_names):
+    labels = [i for i in range(len(target_names))]
     metrics_summary = precision_recall_fscore_support(
             y_true=y_true,
-            y_pred=y_pred)
+            y_pred=y_pred,
+            labels=labels)
     metrics_sum_index = ['precision', 'recall', 'f1-score', 'support']
     class_report_df = pd.DataFrame(
         list(metrics_summary),
