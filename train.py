@@ -44,9 +44,9 @@ batch_size = 16
 epochs = 60
 
 # file paths
-log_filepath = './logs/run2'
 weights_store_filepath = './models/'
-train_id = '1'
+train_id = '2'
+log_filepath = './logs/run' + train_id
 model_name = 'beenet_' + train_id + '.h5'
 model_path = os.path.join(weights_store_filepath, model_name)
 
