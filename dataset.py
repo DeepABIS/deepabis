@@ -1,3 +1,4 @@
+from matplotlib import pyplot as plt
 import pandas as pd
 import json
 import glob
@@ -8,17 +9,21 @@ from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import keras
 
+tqdm.pandas()
+
 
 class BeeDataSet:
     def __init__(self, source_dir):
         self.source_dir = source_dir
-        self.genera = {}
+        self.df = None
+        self.genus_names = []
+        self.species_names = []
         self.embedding = {}
         self.num_genus = 0
         self.num_species = 0
         self.num_files = 0
-        self.genus_names = []
-        self.species_names = []
+        self.train = None
+        self.test = None
         self.x_train = np.array([])
         self.y_genus_train = np.array([])
         self.x_test = np.array([])
@@ -34,65 +39,105 @@ class BeeDataSet:
         return genus_embedding, species_embedding
 
     def load(self):
-        num_species = 0
-        num_files = 0
-        genera = {}
-        for genus_path in glob.iglob(self.source_dir + '/*'):
-            if not os.path.isdir(genus_path):
-                continue
-            genus = os.path.basename(genus_path)
-            genera[genus] = {}
-            for species_path in glob.iglob(genus_path + '/*'):
-                species = os.path.basename(species_path)
-                genera[genus][species] = []
-                num_species += 1
-                for sex_path in glob.iglob(species_path + '/*'):
-                    sex = os.path.basename(sex_path)
-                    for filename in glob.iglob(sex_path + '/*.JPG'):
-                        basename = os.path.basename(filename)
-                        genera[genus][species].append(filename)
-                        num_files += 1
-        self.genera = genera
-        self.num_genus = len(self.genera.keys())
-        self.num_species = num_species
-        self.num_files = num_files
+        # Load embedding (genus/species --> index)
         with open(self.source_dir + '/embeddings.json', 'rb') as file:
             self.embedding = json.load(file)
-        self.make_data()
+        genus_names = []
+        genus_indices = []
+        species_names = []
+        species_indices = []
+        for genus in self.embedding:
+            index = self.embedding[genus]['index']
+            genus_indices.append(index)
+            genus_names.append(genus)
+            for species in self.embedding[genus]['species']:
+                species_index = self.embedding[genus]['species'][species]
+                species_indices.append(species_index)
+                species_names.append(species)
+        genus_df = pd.DataFrame(data={'index':genus_indices}, index=genus_names)
+        species_df = pd.DataFrame(data={'index':species_indices}, index=species_names)
 
-    def make_data(self):
+        # Load number of files
+        num_files = 0
+        for type_path in glob.iglob(self.source_dir + '/*'):
+            type = os.path.basename(type_path)
+            if not os.path.isdir(type_path):
+                continue
+            for genus_path in glob.iglob(type_path + '/*'):
+                genus = os.path.basename(genus_path)
+                genus_index = self.get_embedding(genus)
+                for species_path in glob.iglob(genus_path + '/*'):
+                    species = os.path.basename(species_path)
+                    species_index = self.get_embedding(genus, species)
+                    for filename in glob.iglob(species_path + '/*.JPG'):
+                        num_files += 1
+        paths = []
         x = []
-        y_genus = []
+        y_genera = []
         y_species = []
-        self.genus_names = [None] * self.num_genus
-        self.species_names = [None] * self.num_species
-        with tqdm(total=self.num_files) as pbar:
-            for genus in self.genera:
-                for species in self.genera[genus]:
-                    label_genus, label_species = self.get_embedding(genus, species)
-                    self.genus_names[label_genus] = genus
-                    self.species_names[label_species] = species
-                    for filename in self.genera[genus][species]:
-                        with open(filename, 'rb') as stream:
-                            bytes = bytearray(stream.read())
-                            numpyarray = np.asarray(bytes, dtype=np.uint8)
-                            img = cv2.imdecode(numpyarray, cv2.IMREAD_GRAYSCALE)
-                            img = cv2.resize(img, (256, 256))
-                            img = np.float32(img)
-                            img = np.reshape(img, (256, 256, 1))
-                            x.append(img)
-                            y_genus.append(label_genus)
-                            y_species.append(label_species)
-                            pbar.update()
-        x = np.array(x)
-        y_genus = np.array(y_genus)
-        y_species = np.array(y_species)
-        self.x_train, self.x_test, self.y_genus_train, self.y_genus_test, self.y_species_train, self.y_species_test = \
-            train_test_split(x, y_genus, y_species, test_size = 0.10, random_state = 42)
+        types = []
+        # Load images
+        with tqdm(total=num_files) as pbar:
+            for type_path in glob.iglob(self.source_dir + '/*'):
+                type = os.path.basename(type_path)
+                if not os.path.isdir(type_path):
+                    continue
+                for genus_path in glob.iglob(type_path + '/*'):
+                    genus = os.path.basename(genus_path)
+                    for species_path in glob.iglob(genus_path + '/*'):
+                        species = os.path.basename(species_path)
+                        genus_index, species_index = self.get_embedding(genus, species)
+                        for filename in glob.iglob(species_path + '/*.JPG'):
+                            basename = os.path.basename(filename)
+                            with open(filename, 'rb') as stream:
+                                bytes = bytearray(stream.read())
+                                numpyarray = np.asarray(bytes, dtype=np.uint8)
+                                img = cv2.imdecode(numpyarray, cv2.IMREAD_GRAYSCALE)
+                                img = cv2.resize(img, (256, 256))
+                                img = np.float32(img)
+                                img = np.reshape(img, (256, 256, 1))
+                                x.append(img)
+                                paths.append(filename)
+                                y_genera.append(genus_index)
+                                y_species.append(species_index)
+                                types.append(type)
+                                pbar.update()
+        data = {
+            'img': x,
+            'set': pd.Categorical(types),
+            'genus': pd.Categorical(np.array(y_genera)),
+            'species': pd.Categorical(np.array(y_species))
+        }
+        print('Making dataframe...')
+        self.df = pd.DataFrame(data=data)
+        self.num_genus = genus_df.shape[0]
+        self.num_species = species_df.shape[0]
+        self.num_files = num_files
+        self.genus_names = genus_df.index.values
+        self.species_names = species_df.index.values
+        print('Extracting train data...')
+        self.train = self.df[self.df.set == 'train']
+        print('Extracting test data...')
+        self.test = self.df[self.df.set == 'test']
+        self.x_train = np.array([x[index] for index, row in self.train.iterrows()])
+        self.x_test = np.array([x[index] for index, row in self.test.iterrows()])
+        self.y_genus_train = self.train['genus'].values
+        self.y_genus_test = self.test['genus'].values
+        self.y_species_train = self.train['species'].values
+        self.y_species_test = self.test['species'].values
+        print('Transforming data...')
+        self.transform_data()
 
-        self.x_train = (self.x_train - np.mean(self.x_train)) / np.std(self.x_train)
-        self.x_test = (self.x_test - np.mean(self.x_test)) / np.std(self.x_test)
+    def transform_data(self):
+        print('Normalizing data...')
+        mean_train = np.mean(self.x_train)
+        mean_test = np.mean(self.x_test)
+        self.x_train = self.x_train - mean_train
+        self.x_test = self.x_test - mean_test
+        self.x_train /= 255
+        self.x_test /= 255
 
+        print('To Categorical...')
         self.y_genus_train = keras.utils.to_categorical(self.y_genus_train, self.num_genus)
         self.y_genus_test = keras.utils.to_categorical(self.y_genus_test, self.num_genus)
 
