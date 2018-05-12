@@ -1,15 +1,17 @@
 import itertools
 
+from keras.utils import plot_model
 from matplotlib import pyplot as plt
 from keras import Model
 from keras.models import load_model
 from sklearn.metrics import classification_report, precision_recall_fscore_support, confusion_matrix
 from dataset import BeeDataSet
+from runs import runs
 import pandas as pd
 import numpy as np
 import os
 
-train_id = '3'
+train_id = runs.current().id
 
 
 def pandas_classification_report(y_true, y_pred, target_names):
@@ -35,8 +37,9 @@ weights_store_filepath = './models/'
 model_name = 'beenet_' + train_id + '.h5'
 model_path = os.path.join(weights_store_filepath, model_name)
 model = load_model(model_path)
+plot_model(model, to_file=reports_filepath + '/run_' + train_id + '_model.png')
 
-dataset = BeeDataSet(source_dir='../dataset_genus8_traintest')
+dataset = BeeDataSet(source_dir=runs.current().dataset)
 dataset.load()
 
 y_genus_test = np.argmax(dataset.y_genus_test, axis=1)
@@ -111,7 +114,7 @@ plt.savefig('reports/run_' + train_id + '_genus.png')
 cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred)
 
 # Plot normalized confusion matrix
-plt.figure(figsize=(20, 20))
+plt.figure(figsize=(25, 20))
 plot_confusion_matrix(cnf_matrix_species, classes=dataset.species_names,
                       title='Species confusion matrix, with normalization', normalize=True, plot_text=False)
 plt.savefig('reports/run_' + train_id + '_species.png')

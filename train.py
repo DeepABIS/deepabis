@@ -1,6 +1,6 @@
 from keras.callbacks import LearningRateScheduler, TensorBoard
 from sklearn.utils import compute_class_weight
-
+from runs import runs
 from dataset import BeeDataSet
 from model import BeeCNN
 import keras
@@ -36,7 +36,7 @@ class LossWeightsModifier(keras.callbacks.Callback):
             K.set_value(self.beta, 1)
 
 
-dataset = BeeDataSet(source_dir='../dataset_genus8_aug')
+dataset = BeeDataSet(source_dir=runs.current().dataset)
 dataset.load()
 
 class_weight_genus = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_genus_train, axis=1)),
@@ -48,12 +48,12 @@ net = BeeCNN(dataset.num_genus, dataset.num_species)
 model = net.model()
 
 # hyperparameters
-batch_size = 16
-epochs = 60
+batch_size = runs.current().batch_size
+epochs = runs.current().epochs
 
 # file paths
 weights_store_filepath = './models/'
-train_id = '4'
+train_id = runs.current().id
 log_filepath = './logs/run' + train_id
 model_name = 'beenet_' + train_id + '.h5'
 model_path = os.path.join(weights_store_filepath, model_name)
