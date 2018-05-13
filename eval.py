@@ -114,7 +114,7 @@ plt.savefig('reports/run_' + train_id + '_genus.png')
 cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred)
 
 # Plot normalized confusion matrix
-plt.figure(figsize=(25, 20))
+plt.figure(figsize=(20, 20))
 plot_confusion_matrix(cnf_matrix_species, classes=dataset.species_names,
                       title='Species confusion matrix, with normalization', normalize=True, plot_text=False)
 plt.savefig('reports/run_' + train_id + '_species.png')

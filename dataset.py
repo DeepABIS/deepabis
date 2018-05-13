@@ -8,6 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import keras
+import dask.array as da
 
 tqdm.pandas()
 
@@ -78,11 +79,8 @@ class BeeDataSet:
         types = []
         # Load images
         with tqdm(total=num_files) as pbar:
-            for type_path in glob.iglob(self.source_dir + '/*'):
-                type = os.path.basename(type_path)
-                if not os.path.isdir(type_path):
-                    continue
-                for genus_path in glob.iglob(type_path + '/*'):
+            for type in ['train', 'test']:
+                for genus_path in glob.iglob(self.source_dir + '/' + type + '/*'):
                     genus = os.path.basename(genus_path)
                     for species_path in glob.iglob(genus_path + '/*'):
                         species = os.path.basename(species_path)
@@ -130,11 +128,14 @@ class BeeDataSet:
 
     def transform_data(self):
         print('Normalizing data...')
-        mean_train = np.mean(self.x_train)
-        mean_test = np.mean(self.x_test)
-        self.x_train = self.x_train - mean_train
-        self.x_test = self.x_test - mean_test
+        train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
+        train_mean = train_da.mean().compute()
+        self.x_train = (self.x_train - train_mean)
         self.x_train /= 255
+
+        test_da = da.from_array(self.x_test, chunks=(500, 256, 256, 1))
+        test_mean = test_da.mean().compute()
+        self.x_test = (self.x_test - test_mean)
         self.x_test /= 255
 
         print('To Categorical...')
