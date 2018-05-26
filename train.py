@@ -11,10 +11,11 @@ import os
 
 def scheduler(epoch):
     learning_rate_init = 0.003
-    if epoch > 40:
-        learning_rate_init = 0.0005
-    if epoch > 50:
-        learning_rate_init = 0.0001
+    if runs.current().lr_decay:
+        if epoch > 40:
+            learning_rate_init = 0.0005
+        if epoch > 50:
+            learning_rate_init = 0.0001
     return learning_rate_init
 
 
@@ -37,14 +38,17 @@ class LossWeightsModifier(keras.callbacks.Callback):
 
 
 dataset = BeeDataSet(source_dir=runs.current().dataset)
-dataset.load()
+dataset.load(mode=runs.current().mode)
 
-class_weight_genus = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_genus_train, axis=1)),
-                                                                np.argmax(dataset.y_genus_train, axis=1))
-class_weight_species = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_species_train, axis=1)),
-                                                                  np.argmax(dataset.y_species_train, axis=1))
+class_weight = []
+if runs.current().class_weights:
+    class_weight_genus = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_genus_train, axis=1)),
+                                              np.argmax(dataset.y_genus_train, axis=1))
+    class_weight_species = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_species_train, axis=1)),
+                                                np.argmax(dataset.y_species_train, axis=1))
+    class_weight = [class_weight_genus, class_weight_species]
 
-net = BeeCNN(dataset.num_genus, dataset.num_species)
+net = BeeCNN(dataset.num_genus, dataset.num_species, version=runs.current().model)
 model = net.model()
 
 # hyperparameters
@@ -64,7 +68,7 @@ change_lw = LossWeightsModifier(net.alpha, net.beta)
 cbks = [change_lr, tb_cb, change_lw]
 
 model.fit(dataset.x_train, [dataset.y_genus_train, dataset.y_species_train],
-          class_weight=[class_weight_genus, class_weight_species],
+          class_weight=class_weight,
           batch_size=batch_size,
           epochs=epochs,
           verbose=1,

@@ -39,7 +39,7 @@ class BeeDataSet:
             species_embedding = self.embedding[genus]['species'][species]
         return genus_embedding, species_embedding
 
-    def load(self):
+    def load(self, mode = 'mean_subtraction'):
         # Load embedding (genus/species --> index)
         with open(self.source_dir + '/embeddings.json', 'rb') as file:
             self.embedding = json.load(file)
@@ -124,19 +124,30 @@ class BeeDataSet:
         self.y_species_train = self.train['species'].values
         self.y_species_test = self.test['species'].values
         print('Transforming data...')
-        self.transform_data()
+        self.transform_data(mode=mode)
 
-    def transform_data(self):
-        print('Normalizing data...')
+    def transform_data(self, mode = 'mean_subtraction'):
+        mode_options = ('mean_subtraction', 'per_channel')
+        if mode not in mode_options:
+            raise ValueError('Mode has to be one of ' + str(mode_options))
+        print('Normalizing data (' + mode + ')...')
         train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
         train_mean = train_da.mean().compute()
         self.x_train = (self.x_train - train_mean)
-        self.x_train /= 255
+        if mode == 'per_channel':
+            std = train_da.std().compute()
+            self.x_train /= std
+        else:
+            self.x_train /= 255
 
         test_da = da.from_array(self.x_test, chunks=(500, 256, 256, 1))
         test_mean = test_da.mean().compute()
         self.x_test = (self.x_test - test_mean)
-        self.x_test /= 255
+        if mode == 'per_channel':
+            std = test_da.std().compute()
+            self.x_test /= std
+        else:
+            self.x_test /= 255
 
         print('To Categorical...')
         self.y_genus_train = keras.utils.to_categorical(self.y_genus_train, self.num_genus)

@@ -31,16 +31,18 @@ def pandas_classification_report(y_true, y_pred, target_names):
     return class_report_df.T
 
 
-reports_filepath = './reports/'
+reports_filepath = './reports/run' + train_id + '/'
+if not os.path.exists(reports_filepath):
+    os.mkdir(reports_filepath)
 weights_store_filepath = './models/'
 
 model_name = 'beenet_' + train_id + '.h5'
 model_path = os.path.join(weights_store_filepath, model_name)
 model = load_model(model_path)
-plot_model(model, to_file=reports_filepath + '/run_' + train_id + '_model.png')
+plot_model(model, to_file=reports_filepath + '/model.png')
 
 dataset = BeeDataSet(source_dir=runs.current().dataset)
-dataset.load()
+dataset.load(mode=runs.current().mode)
 
 y_genus_test = np.argmax(dataset.y_genus_test, axis=1)
 
@@ -53,13 +55,13 @@ if train_id == '1':
 y_genus_pred, y_species_pred = model.predict(dataset.x_test, verbose=1)
 y_genus_pred = np.argmax(y_genus_pred, axis=1)
 genus_report = pandas_classification_report(y_genus_test, y_genus_pred, dataset.genus_names)
-genus_report.to_csv(reports_filepath + 'run_' + train_id + '_genus.csv')
+genus_report.to_csv(reports_filepath + '/genus.csv')
 print(genus_report)
 
 y_species_test = np.argmax(dataset.y_species_test, axis=1)
 y_species_pred = np.argmax(y_species_pred, axis=1)
 species_report = pandas_classification_report(y_species_test, y_species_pred, dataset.species_names)
-species_report.to_csv(reports_filepath + 'run_' + train_id + '_species.csv')
+species_report.to_csv(reports_filepath + '/species.csv')
 print(species_report)
 
 
@@ -108,7 +110,7 @@ np.set_printoptions(precision=2)
 plt.figure()
 plot_confusion_matrix(cnf_matrix_genus, classes=dataset.genus_names,
                       title='Genus confusion matrix, with normalization', normalize=True)
-plt.savefig('reports/run_' + train_id + '_genus.png')
+plt.savefig(reports_filepath + '/genus.png')
 
 # Compute confusion matrix
 cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred)
@@ -117,5 +119,5 @@ cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred)
 plt.figure(figsize=(20, 20))
 plot_confusion_matrix(cnf_matrix_species, classes=dataset.species_names,
                       title='Species confusion matrix, with normalization', normalize=True, plot_text=False)
-plt.savefig('reports/run_' + train_id + '_species.png')
+plt.savefig(reports_filepath + '/species.png')
 

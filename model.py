@@ -5,7 +5,7 @@ from keras import optimizers
 
 
 class BeeCNN:
-    def __init__(self, num_genus, num_species):
+    def __init__(self, num_genus, num_species, version='baseline'):
         img_rows, img_cols = 256, 256
         if K.image_data_format() == 'channels_first':
             self.input_shape = (1, img_rows, img_cols)
