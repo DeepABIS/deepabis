@@ -1,4 +1,4 @@
-from keras.callbacks import LearningRateScheduler, TensorBoard
+from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 from sklearn.utils import compute_class_weight
 from runs import runs
 from dataset import BeeDataSet
@@ -46,7 +46,10 @@ if runs.current().class_weights:
                                               np.argmax(dataset.y_genus_train, axis=1))
     class_weight_species = compute_class_weight('balanced', np.unique(np.argmax(dataset.y_species_train, axis=1)),
                                                 np.argmax(dataset.y_species_train, axis=1))
-    class_weight = [class_weight_genus, class_weight_species]
+    if runs.current().branches:
+        class_weight = [class_weight_genus, class_weight_species]
+    else:
+        class_weight = [class_weight_species]
 
 net = BeeCNN(dataset.num_genus, dataset.num_species, version=runs.current().model)
 model = net.model()
@@ -60,20 +63,33 @@ weights_store_filepath = './models/'
 train_id = runs.current().id
 log_filepath = './logs/run' + train_id
 model_name = 'beenet_' + train_id + '.h5'
+model_name_best = 'beenet_' + train_id + '.weights.best.hdf5'
 model_path = os.path.join(weights_store_filepath, model_name)
+model_path_best = os.path.join(weights_store_filepath, model_name_best)
 
 change_lr = LearningRateScheduler(scheduler)
 tb_cb = TensorBoard(log_dir=log_filepath, histogram_freq=0)
 change_lw = LossWeightsModifier(net.alpha, net.beta)
-cbks = [change_lr, tb_cb, change_lw]
+checkpoint = ModelCheckpoint(model_path_best, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
-model.fit(dataset.x_train, [dataset.y_genus_train, dataset.y_species_train],
-          class_weight=class_weight,
-          batch_size=batch_size,
-          epochs=epochs,
-          verbose=1,
-          callbacks=cbks,
-          validation_data=(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test]))
+if runs.current().branches:
+    cbks = [change_lr, tb_cb, change_lw, checkpoint]
+    model.fit(dataset.x_train, [dataset.y_genus_train, dataset.y_species_train],
+              class_weight=class_weight,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              callbacks=cbks,
+              validation_data=(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test]))
+else:
+    cbks = [change_lr, tb_cb, checkpoint]
+    model.fit(dataset.x_train, dataset.y_species_train,
+              class_weight=class_weight,
+              batch_size=batch_size,
+              epochs=epochs,
+              verbose=1,
+              callbacks=cbks,
+              validation_data=(dataset.x_test, dataset.y_species_test))
 
 # ---------------------------------------------------------------------------------
 # The following compile() is just a behavior to make sure this model can be saved.
@@ -84,6 +100,9 @@ model.compile(loss='categorical_crossentropy',
               optimizer=model.optimizer,
               metrics=['accuracy'])
 
-score = model.evaluate(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test], verbose=0)
-model.save(model_path)
+if runs.current().branches:
+    score = model.evaluate(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test], verbose=0)
+else:
+    score = model.evaluate(dataset.x_test, dataset.y_species_test, verbose=0)
+#model.save(model_path)
 print('score is: ', score)

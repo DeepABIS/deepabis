@@ -39,7 +39,7 @@ class BeeDataSet:
             species_embedding = self.embedding[genus]['species'][species]
         return genus_embedding, species_embedding
 
-    def load(self, mode = 'mean_subtraction'):
+    def load(self, mode = 'mean_subtraction', test_only = False):
         # Load embedding (genus/species --> index)
         with open(self.source_dir + '/embeddings.json', 'rb') as file:
             self.embedding = json.load(file)
@@ -62,6 +62,8 @@ class BeeDataSet:
         num_files = 0
         for type_path in glob.iglob(self.source_dir + '/*'):
             type = os.path.basename(type_path)
+            if test_only and type == 'train':
+                continue
             if not os.path.isdir(type_path):
                 continue
             for genus_path in glob.iglob(type_path + '/*'):
@@ -80,6 +82,8 @@ class BeeDataSet:
         # Load images
         with tqdm(total=num_files) as pbar:
             for type in ['train', 'test']:
+                if test_only and type == 'train':
+                    continue
                 for genus_path in glob.iglob(self.source_dir + '/' + type + '/*'):
                     genus = os.path.basename(genus_path)
                     for species_path in glob.iglob(genus_path + '/*'):
@@ -131,14 +135,15 @@ class BeeDataSet:
         if mode not in mode_options:
             raise ValueError('Mode has to be one of ' + str(mode_options))
         print('Normalizing data (' + mode + ')...')
-        train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
-        train_mean = train_da.mean().compute()
-        self.x_train = (self.x_train - train_mean)
-        if mode == 'per_channel':
-            std = train_da.std().compute()
-            self.x_train /= std
-        else:
-            self.x_train /= 255
+        if self.x_train.shape[0] > 0:
+            train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
+            train_mean = train_da.mean().compute()
+            self.x_train = (self.x_train - train_mean)
+            if mode == 'per_channel':
+                std = train_da.std().compute()
+                self.x_train /= std
+            else:
+                self.x_train /= 255
 
         test_da = da.from_array(self.x_test, chunks=(500, 256, 256, 1))
         test_mean = test_da.mean().compute()

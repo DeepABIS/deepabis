@@ -2,6 +2,7 @@ from keras.layers import Input, Conv2D, BatchNormalization, MaxPooling2D, Flatte
 from keras.models import Model
 from keras import backend as K
 from keras import optimizers
+import keras
 
 
 class BeeCNN:
@@ -13,7 +14,7 @@ class BeeCNN:
             self.input_shape = (img_rows, img_cols, 1)
         self.num_c_1 = num_genus
         self.num_classes = num_species
-        versions = ('baseline', 'blocks4')
+        versions = ('baseline', 'blocks4', 'oneloss', 'mobilenet', 'inception_resnet')
         if version not in versions:
             raise ValueError('Version has to be one of ' + str(versions))
         self.version = version
@@ -24,7 +25,86 @@ class BeeCNN:
     def model(self):
         if self.version == 'blocks4':
             return self.blocks4()
+        if self.version == 'oneloss':
+            return self.oneloss()
+        if self.version == 'mobilenet':
+            return self.mobilenet()
+        if self.version == 'inception_resnet':
+            return self.inception_resnet()
         return self.baseline()
+
+    def inception_resnet(self):
+        model = keras.applications.InceptionResNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
+        model.summary()
+
+        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=sgd,
+                      # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
+        return model
+
+    def mobilenet(self):
+        model = keras.applications.MobileNet(input_shape=self.input_shape, weights=None, classes=self.num_classes)
+        model.summary()
+
+        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=sgd,
+                      # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
+        return model
+
+    def oneloss(self):
+        img_input = Input(shape=self.input_shape, name='input')
+
+        # --- block 1 ---
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv1')(img_input)
+        x = BatchNormalization()(x)
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
+
+        # --- block 2 ---
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
+
+        # --- block 3 ---
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
+
+        # --- block 4 ---
+        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block4_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
+
+        # --- fine block ---
+        x = Flatten(name='flatten')(x)
+        x = Dense(2048, activation='relu', name='fc_1')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        x = Dense(2048, activation='relu', name='fc2')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        fine_pred = Dense(self.num_classes, activation='softmax', name='predictions')(x)
+
+        model = Model(inputs=img_input, outputs=[fine_pred], name='beecnn')
+        model.summary()
+
+        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=sgd,
+                      # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
+        return model
 
     def blocks4(self):
         img_input = Input(shape=self.input_shape, name='input')
