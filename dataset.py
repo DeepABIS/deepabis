@@ -54,7 +54,7 @@ class BeeDataSet:
             for species in self.embedding[genus]['species']:
                 species_index = self.embedding[genus]['species'][species]
                 species_indices.append(species_index)
-                species_names.append(species)
+                species_names.append(genus + ' ' + species)
         genus_df = pd.DataFrame(data={'index':genus_indices}, index=genus_names)
         species_df = pd.DataFrame(data={'index':species_indices}, index=species_names)
 
@@ -117,6 +117,7 @@ class BeeDataSet:
         self.num_files = num_files
         self.genus_names = genus_df.index.values
         self.species_names = species_df.index.values
+        self.species_index = species_df['index']
         print('Extracting train data...')
         self.train = self.df[self.df.set == 'train']
         print('Extracting test data...')

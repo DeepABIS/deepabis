@@ -69,13 +69,17 @@ def plot_confusion_matrix(cm, classes,
     else:
         print('Confusion matrix, without normalization')
 
+    print(cm.shape)
+    print(len(classes))
+    assert cm.shape[0] == len(classes)
+
     print(cm)
 
     plt.imshow(cm, interpolation='nearest', cmap=cmap)
     plt.title(title)
     plt.colorbar()
     tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=45)
+    plt.xticks(tick_marks, classes, rotation=90)
     plt.yticks(tick_marks, classes)
 
     fmt = '.2f' if normalize else 'd'
@@ -91,7 +95,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
 
 
-reports_filepath = './reports/run' + train_id + '/'
+reports_filepath = './reports/run' + train_id + '_trainmean/'
 if not os.path.exists(reports_filepath):
     os.mkdir(reports_filepath)
 weights_store_filepath = './models/'
@@ -124,7 +128,7 @@ if runs.current().branches:
     genus_report.to_csv(reports_filepath + '/genus.csv')
     print(genus_report)
 
-    cnf_matrix_genus = confusion_matrix(y_genus_test, y_genus_pred)
+    cnf_matrix_genus = confusion_matrix(y_genus_test, y_genus_pred, labels=dataset.species_names)
 
     # Plot normalized confusion matrix
     plt.figure()
@@ -143,7 +147,7 @@ print(species_report)
 np.set_printoptions(precision=2)
 
 # Compute confusion matrix
-cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred)
+cnf_matrix_species = confusion_matrix(y_species_test, y_species_pred, labels=dataset.species_index)
 
 # Plot normalized confusion matrix
 plt.figure(figsize=(20, 20))
