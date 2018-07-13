@@ -1,7 +1,7 @@
 import configparser
 from collections import namedtuple
 
-Run = namedtuple('Run', 'id dataset batch_size epochs mode class_weights lr_decay model branches')
+Run = namedtuple('Run', 'id dataset batch_size epochs mode class_weights lr_decay model branches transform_flattened')
 
 
 class Runs:
@@ -24,6 +24,7 @@ class Runs:
                 lr_decay = run.getboolean('lr_decay')
                 model = run['model']
                 branches = run.getboolean('branches')
+                transform_flattened = run.getboolean('transform_flattened')
                 self.runs[section] = Run(id=id,
                                          dataset=dataset,
                                          batch_size=batch_size,
@@ -32,7 +33,8 @@ class Runs:
                                          class_weights=class_weights,
                                          lr_decay=lr_decay,
                                          model=model,
-                                         branches=branches)
+                                         branches=branches,
+                                         transform_flattened=transform_flattened)
         if 'CURRENT' in config:
             self.run = config['CURRENT']['run']
 

@@ -37,7 +37,7 @@ class LossWeightsModifier(keras.callbacks.Callback):
             K.set_value(self.beta, 1)
 
 
-dataset = BeeDataSet(source_dir=runs.current().dataset)
+dataset = BeeDataSet(source_dir=runs.current().dataset, dataset_id=runs.current().id)
 dataset.load(mode=runs.current().mode)
 
 class_weight = []

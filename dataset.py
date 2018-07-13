@@ -8,14 +8,17 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import keras
-import dask.array as da
+from dask_ml.preprocessing import StandardScaler
+import joblib
+from dask import array as da
 
 tqdm.pandas()
 
 
 class BeeDataSet:
-    def __init__(self, source_dir):
+    def __init__(self, source_dir, dataset_id):
         self.source_dir = source_dir
+        self.dataset_id = dataset_id
         self.df = None
         self.genus_names = []
         self.species_names = []
@@ -131,28 +134,23 @@ class BeeDataSet:
         print('Transforming data...')
         self.transform_data(mode=mode)
 
-    def transform_data(self, mode = 'mean_subtraction'):
+    def transform_data(self, mode='mean_subtraction'):
         mode_options = ('mean_subtraction', 'per_channel')
         if mode not in mode_options:
             raise ValueError('Mode has to be one of ' + str(mode_options))
         print('Normalizing data (' + mode + ')...')
+        scaler_path = './transform/' + str(self.dataset_id) + '.pkl'
+        with_std = mode == 'per_channel'
         if self.x_train.shape[0] > 0:
-            train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
-            train_mean = train_da.mean().compute()
-            self.x_train = (self.x_train - train_mean)
-            if mode == 'per_channel':
-                std = train_da.std().compute()
-                self.x_train /= std
-            else:
+            scaler = StandardScaler(with_mean=True, with_std=with_std)
+            self.x_train = scaler.fit_transform(self.x_train)
+            joblib.dump(scaler, scaler_path)
+            if mode != 'per_channel':
                 self.x_train /= 255
-
-        test_da = da.from_array(self.x_test, chunks=(500, 256, 256, 1))
-        test_mean = test_da.mean().compute()
-        self.x_test = (self.x_test - test_mean)
-        if mode == 'per_channel':
-            std = test_da.std().compute()
-            self.x_test /= std
         else:
+            scaler = joblib.load(scaler_path)
+        self.x_test = scaler.transform(self.x_test)
+        if mode != 'per_channel':
             self.x_test /= 255
 
         print('To Categorical...')

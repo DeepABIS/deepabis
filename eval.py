@@ -110,7 +110,7 @@ else:
     model = load_model(model_path)
 plot_model(model, to_file=reports_filepath + '/model.png', show_shapes=False, show_layer_names=False, rankdir='TB')
 
-dataset = BeeDataSet(source_dir=runs.current().dataset)
+dataset = BeeDataSet(source_dir=runs.current().dataset, dataset_id=runs.current().id)
 dataset.load(mode=runs.current().mode, test_only=True)
 
 y_genus_test = np.argmax(dataset.y_genus_test, axis=1)
