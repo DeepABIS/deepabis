@@ -14,7 +14,7 @@ class BeeCNN:
             self.input_shape = (img_rows, img_cols, 1)
         self.num_c_1 = num_genus
         self.num_classes = num_species
-        versions = ('baseline', 'blocks4', 'oneloss', 'mobilenet', 'inception_resnet')
+        versions = ('baseline', 'blocks4', 'oneloss', 'mobilenet', 'mobilenetV2', 'inception_resnet')
         if version not in versions:
             raise ValueError('Version has to be one of ' + str(versions))
         self.version = version
@@ -29,6 +29,8 @@ class BeeCNN:
             return self.oneloss()
         if self.version == 'mobilenet':
             return self.mobilenet()
+        if self.version == 'mobilenetV2':
+            return self.mobilenetV2()
         if self.version == 'inception_resnet':
             return self.inception_resnet()
         return self.baseline()
@@ -45,7 +47,18 @@ class BeeCNN:
         return model
 
     def mobilenet(self):
-        model = keras.applications.MobileNet(input_shape=self.input_shape, weights=None, classes=self.num_classes)
+        model = keras.applications.MobileNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
+        model.summary()
+
+        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=sgd,
+                      # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
+        return model
+
+    def mobilenetV2(self):
+        model = keras.applications.MobileNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
         model.summary()
 
         sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)

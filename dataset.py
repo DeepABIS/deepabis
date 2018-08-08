@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 from sklearn.model_selection import train_test_split
 import keras
-from dask_ml.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler
 import joblib
 from dask import array as da
 
@@ -142,8 +142,11 @@ class BeeDataSet:
         scaler_path = './transform/' + str(self.dataset_id) + '.pkl'
         with_std = mode == 'per_channel'
         if self.x_train.shape[0] > 0:
+            train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
             scaler = StandardScaler(with_mean=True, with_std=with_std)
-            self.x_train = scaler.fit_transform(self.x_train)
+            scaler.mean_ = train_da.mean().compute()
+            scaler.scale_ = train_da.std().compute()
+            self.x_train = scaler.transform(self.x_train)
             joblib.dump(scaler, scaler_path)
             if mode != 'per_channel':
                 self.x_train /= 255
