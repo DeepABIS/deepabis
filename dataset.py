@@ -1,3 +1,6 @@
+import math
+
+from keras.utils import Sequence
 from matplotlib import pyplot as plt
 import pandas as pd
 import json
@@ -34,6 +37,7 @@ class BeeDataSet:
         self.y_genus_test = np.array([])
         self.y_species_train = np.array([])
         self.y_species_test = np.array([])
+        self.scaler = StandardScaler()
 
     def get_embedding(self, genus, species=None):
         genus_embedding = self.embedding[genus]['index']
@@ -43,6 +47,9 @@ class BeeDataSet:
         return genus_embedding, species_embedding
 
     def load(self, mode = 'mean_subtraction', test_only = False):
+        mode_options = ('mean_subtraction', 'per_channel')
+        if mode not in mode_options:
+            raise ValueError('Mode has to be one of ' + str(mode_options))
         # Load embedding (genus/species --> index)
         with open(self.source_dir + '/embeddings.json', 'rb') as file:
             self.embedding = json.load(file)
@@ -63,6 +70,8 @@ class BeeDataSet:
 
         # Load number of files
         num_files = 0
+        num_train = 0
+        num_test = 0
         for type_path in glob.iglob(self.source_dir + '/*'):
             type = os.path.basename(type_path)
             if test_only and type == 'train':
@@ -77,11 +86,23 @@ class BeeDataSet:
                     species_index = self.get_embedding(genus, species)
                     for filename in glob.iglob(species_path + '/*.JPG'):
                         num_files += 1
+                        if type == 'train':
+                            num_train += 1
+                        else:
+                            num_test += 1
         paths = []
         x = []
         y_genera = []
         y_species = []
         types = []
+
+        self.x_train = np.zeros((num_train, 256, 256, 1))
+        self.x_test = np.zeros((num_test, 256, 256, 1))
+        test_i = 0
+
+        if not test_only:
+            self.scaler = StandardScaler(with_std=mode == 'per_channel')
+
         # Load images
         with tqdm(total=num_files) as pbar:
             for type in ['train', 'test']:
@@ -94,6 +115,10 @@ class BeeDataSet:
                         genus_index, species_index = self.get_embedding(genus, species)
                         for filename in glob.iglob(species_path + '/*.JPG'):
                             basename = os.path.basename(filename)
+                            paths.append(filename)
+                            y_genera.append(genus_index)
+                            y_species.append(species_index)
+                            types.append(type)
                             with open(filename, 'rb') as stream:
                                 bytes = bytearray(stream.read())
                                 numpyarray = np.asarray(bytes, dtype=np.uint8)
@@ -101,14 +126,23 @@ class BeeDataSet:
                                 img = cv2.resize(img, (256, 256))
                                 img = np.float32(img)
                                 img = np.reshape(img, (256, 256, 1))
-                                x.append(img)
-                                paths.append(filename)
-                                y_genera.append(genus_index)
-                                y_species.append(species_index)
-                                types.append(type)
-                                pbar.update()
+                                if type == 'train':
+                                    self.scaler.partial_fit(img.reshape(-1, 1))
+                                if type == 'test':
+                                    self.x_test[test_i] = img
+                                    test_i += 1
+                            pbar.update()
+
+        scaler_path = './transform/' + str(self.dataset_id) + '.pkl'
+        if not test_only:
+            print('Mean: {}'.format(self.scaler.mean_))
+            print('Std: {}'.format(self.scaler.scale_))
+            joblib.dump(self.scaler, scaler_path)
+        else:
+            self.scaler = joblib.load(scaler_path)
+
         data = {
-            'img': x,
+            'path': paths,
             'set': pd.Categorical(types),
             'genus': pd.Categorical(np.array(y_genera)),
             'species': pd.Categorical(np.array(y_species))
@@ -125,8 +159,6 @@ class BeeDataSet:
         self.train = self.df[self.df.set == 'train']
         print('Extracting test data...')
         self.test = self.df[self.df.set == 'test']
-        self.x_train = np.array([x[index] for index, row in self.train.iterrows()])
-        self.x_test = np.array([x[index] for index, row in self.test.iterrows()])
         self.y_genus_train = self.train['genus'].values
         self.y_genus_test = self.test['genus'].values
         self.y_species_train = self.train['species'].values
@@ -135,24 +167,8 @@ class BeeDataSet:
         self.transform_data(mode=mode)
 
     def transform_data(self, mode='mean_subtraction'):
-        mode_options = ('mean_subtraction', 'per_channel')
-        if mode not in mode_options:
-            raise ValueError('Mode has to be one of ' + str(mode_options))
         print('Normalizing data (' + mode + ')...')
-        scaler_path = './transform/' + str(self.dataset_id) + '.pkl'
-        with_std = mode == 'per_channel'
-        if self.x_train.shape[0] > 0:
-            train_da = da.from_array(self.x_train, chunks=(500, 256, 256, 1))
-            scaler = StandardScaler(with_mean=True, with_std=with_std)
-            scaler.mean_ = train_da.mean().compute()
-            scaler.scale_ = train_da.std().compute()
-            self.x_train = scaler.transform(self.x_train)
-            joblib.dump(scaler, scaler_path)
-            if mode != 'per_channel':
-                self.x_train /= 255
-        else:
-            scaler = joblib.load(scaler_path)
-        self.x_test = scaler.transform(self.x_test)
+        self.x_test = self.transform(self.x_test)
         if mode != 'per_channel':
             self.x_test /= 255
 
@@ -162,3 +178,48 @@ class BeeDataSet:
 
         self.y_species_train = keras.utils.to_categorical(self.y_species_train, self.num_species)
         self.y_species_test = keras.utils.to_categorical(self.y_species_test, self.num_species)
+
+    def transform(self, X):
+        X -= self.scaler.mean_
+        X /= self.scaler.scale_
+        return X
+
+    class Generator(Sequence):
+        # Class is a dataset wrapper for better training performance
+        def __init__(self, x_set, y_set, scaler, batch_size=32):
+            self.x, self.y = x_set, y_set
+            self.scaler = scaler
+            self.batch_size = batch_size
+            self.indices = np.arange(self.x.shape[0])
+            #np.random.shuffle(self.indices)
+
+        def __len__(self):
+            return math.ceil(self.x.shape[0] / self.batch_size)
+
+        def __getitem__(self, idx):
+            inds = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
+            batch_x = np.zeros((len(inds), 256, 256, 1))
+            i = 0
+            for index in inds:
+                path = self.x[index]
+                with open(path, 'rb') as stream:
+                    bytes = bytearray(stream.read())
+                    numpyarray = np.asarray(bytes, dtype=np.uint8)
+                    img = cv2.imdecode(numpyarray, cv2.IMREAD_GRAYSCALE)
+                    img = cv2.resize(img, (256, 256))
+                    img = np.float32(img)
+                    img = np.reshape(img, (256, 256, 1))
+                    batch_x[i] = img
+                    i+=1
+
+            batch_x = self.transform(batch_x)
+            batch_y = self.y[inds]
+            return batch_x, batch_y
+
+        def on_epoch_end(self):
+            np.random.shuffle(self.indices)
+
+        def transform(self, X):
+            X -= self.scaler.mean_
+            X /= self.scaler.scale_
+            return X

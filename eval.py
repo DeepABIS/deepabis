@@ -95,7 +95,7 @@ def plot_confusion_matrix(cm, classes,
     plt.xlabel('Predicted label')
 
 
-reports_filepath = './reports/run' + train_id + '_trainmean/'
+reports_filepath = './reports/run' + train_id + '/'
 if not os.path.exists(reports_filepath):
     os.mkdir(reports_filepath)
 weights_store_filepath = './models/'

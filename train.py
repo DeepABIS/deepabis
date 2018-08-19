@@ -68,7 +68,7 @@ model_path = os.path.join(weights_store_filepath, model_name)
 model_path_best = os.path.join(weights_store_filepath, model_name_best)
 
 change_lr = LearningRateScheduler(scheduler)
-tb_cb = TensorBoard(log_dir=log_filepath, histogram_freq=0)
+tb_cb = TensorBoard(log_dir=log_filepath, histogram_freq=0, batch_size=batch_size)
 change_lw = LossWeightsModifier(net.alpha, net.beta)
 checkpoint = ModelCheckpoint(model_path_best, monitor='val_acc', verbose=1, save_best_only=True, mode='max')
 
@@ -83,9 +83,9 @@ if runs.current().branches:
               validation_data=(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test]))
 else:
     cbks = [change_lr, tb_cb, checkpoint]
-    model.fit(dataset.x_train, dataset.y_species_train,
+    model.fit_generator(dataset.Generator(dataset.train['path'].values, dataset.y_species_train, dataset.scaler, batch_size=batch_size),
               class_weight=class_weight,
-              batch_size=batch_size,
+              steps_per_epoch=len(dataset.y_species_train)/batch_size,
               epochs=epochs,
               verbose=1,
               callbacks=cbks,
