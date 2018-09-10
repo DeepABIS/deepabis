@@ -1,8 +1,6 @@
 logs/
 models/
 reports/
-project.md
-runs.ini
 tensorflow_models/
 transform/
 
