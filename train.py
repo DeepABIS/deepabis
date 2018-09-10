@@ -51,7 +51,7 @@ if runs.current().class_weights:
     else:
         class_weight = [class_weight_species]
 
-net = BeeCNN(dataset.num_genus, dataset.num_species, version=runs.current().model)
+net = BeeCNN(dataset.num_genus, dataset.num_species, run=runs.current())
 model = net.model()
 
 # hyperparameters
@@ -104,5 +104,4 @@ if runs.current().branches:
     score = model.evaluate(dataset.x_test, [dataset.y_genus_test, dataset.y_species_test], verbose=0)
 else:
     score = model.evaluate(dataset.x_test, dataset.y_species_test, verbose=0)
-#model.save(model_path)
 print('score is: ', score)

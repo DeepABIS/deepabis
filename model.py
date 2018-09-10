@@ -6,7 +6,8 @@ import keras
 
 
 class BeeCNN:
-    def __init__(self, num_genus, num_species, version='baseline'):
+    def __init__(self, num_genus, num_species, run):
+        self.run = run
         img_rows, img_cols = 256, 256
         if K.image_data_format() == 'channels_first':
             self.input_shape = (1, img_rows, img_cols)
@@ -15,12 +16,14 @@ class BeeCNN:
         self.num_c_1 = num_genus
         self.num_classes = num_species
         versions = ('baseline', 'blocks4', 'oneloss', 'mobilenet', 'mobilenetV2', 'inception_resnet')
-        if version not in versions:
-            raise ValueError('Version has to be one of ' + str(versions))
-        self.version = version
-
-        self.alpha = K.variable(value=0.99, dtype="float32", name="alpha")  # A1 in paper
-        self.beta = K.variable(value=0.01, dtype="float32", name="beta")  # A2 in paper
+        if run.model not in versions:
+            raise ValueError('Model has to be one of ' + str(versions))
+        self.version = run.model
+        valid_optimizers = ('SGD', 'AdaDelta')
+        if run.optimizer not in valid_optimizers:
+            raise ValueError('Optimizer has to be one of ' + str(valid_optimizers))
+        self.alpha = K.variable(value=0.99, dtype="float32", name="alpha")
+        self.beta = K.variable(value=0.01, dtype="float32", name="beta")
 
     def model(self):
         if self.version == 'blocks4':
@@ -35,13 +38,18 @@ class BeeCNN:
             return self.inception_resnet()
         return self.baseline()
 
+    def optimizer(self):
+        if self.run.optimizer == 'SGD':
+            return optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
+        if self.run.optimizer == 'AdaDelta':
+            return optimizers.Adadelta()
+
     def inception_resnet(self):
         model = keras.applications.InceptionResNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model
@@ -50,9 +58,8 @@ class BeeCNN:
         model = keras.applications.MobileNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model
@@ -61,9 +68,8 @@ class BeeCNN:
         model = keras.applications.MobileNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model
@@ -112,9 +118,8 @@ class BeeCNN:
         model = Model(inputs=img_input, outputs=[fine_pred], name='beecnn')
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model
@@ -170,9 +175,8 @@ class BeeCNN:
         model = Model(inputs=img_input, outputs=[c_1_pred, fine_pred], name='beecnn')
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       loss_weights=[self.alpha, self.beta],
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
@@ -222,9 +226,8 @@ class BeeCNN:
         model = Model(inputs=img_input, outputs=[c_1_pred, fine_pred], name='beecnn')
         model.summary()
 
-        sgd = optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         model.compile(loss='categorical_crossentropy',
-                      optimizer=sgd,
+                      optimizer=self.optimizer(),
                       loss_weights=[self.alpha, self.beta],
                       # optimizer=keras.optimizers.Adadelta(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
