@@ -19,7 +19,7 @@ class BeeCNN:
         if run.model not in versions:
             raise ValueError('Model has to be one of ' + str(versions))
         self.version = run.model
-        valid_optimizers = ('SGD', 'AdaDelta')
+        valid_optimizers = ('SGD', 'AdaDelta', 'AdaGrad', 'Adam')
         if run.optimizer not in valid_optimizers:
             raise ValueError('Optimizer has to be one of ' + str(valid_optimizers))
         self.alpha = K.variable(value=0.99, dtype="float32", name="alpha")
@@ -43,6 +43,10 @@ class BeeCNN:
             return optimizers.SGD(lr=0.003, momentum=0.9, nesterov=True)
         if self.run.optimizer == 'AdaDelta':
             return optimizers.Adadelta()
+        if self.run.optimizer == 'AdaGrad':
+            return optimizers.Adagrad()
+        if self.run.optimizer == 'Adam':
+            return optimizers.Adam()
 
     def inception_resnet(self):
         model = keras.applications.InceptionResNetV2(input_shape=self.input_shape, weights=None, classes=self.num_classes)
