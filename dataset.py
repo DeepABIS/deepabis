@@ -96,8 +96,8 @@ class BeeDataSet:
         y_species = []
         types = []
 
-        self.x_train = np.zeros((num_train, 256, 256, 1))
-        self.x_test = np.zeros((num_test, 256, 256, 1))
+        self.x_train = np.zeros((num_train, 224, 224, 3))
+        self.x_test = np.zeros((num_test, 224, 224, 3))
         test_i = 0
 
         if not test_only:
@@ -122,10 +122,10 @@ class BeeDataSet:
                             with open(filename, 'rb') as stream:
                                 bytes = bytearray(stream.read())
                                 numpyarray = np.asarray(bytes, dtype=np.uint8)
-                                img = cv2.imdecode(numpyarray, cv2.IMREAD_GRAYSCALE)
-                                img = cv2.resize(img, (256, 256))
+                                img = cv2.imdecode(numpyarray, cv2.IMREAD_COLOR)
+                                img = cv2.resize(img, (224, 224))
                                 img = np.float32(img)
-                                img = np.reshape(img, (256, 256, 1))
+                                img = np.reshape(img, (224, 224, 3))
                                 if type == 'train':
                                     self.scaler.partial_fit(img.reshape(-1, 1))
                                 if type == 'test':
@@ -198,22 +198,25 @@ class BeeDataSet:
 
         def __getitem__(self, idx):
             inds = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-            batch_x = np.zeros((len(inds), 256, 256, 1))
+            batch_x = np.zeros((len(inds), 224, 224, 3))
             i = 0
             for index in inds:
                 path = self.x[index]
                 with open(path, 'rb') as stream:
                     bytes = bytearray(stream.read())
                     numpyarray = np.asarray(bytes, dtype=np.uint8)
-                    img = cv2.imdecode(numpyarray, cv2.IMREAD_GRAYSCALE)
-                    img = cv2.resize(img, (256, 256))
+                    img = cv2.imdecode(numpyarray, cv2.IMREAD_COLOR)
+                    img = cv2.resize(img, (224, 224))
                     img = np.float32(img)
-                    img = np.reshape(img, (256, 256, 1))
+                    img = np.reshape(img, (224, 224, 3))
                     batch_x[i] = img
                     i+=1
 
             batch_x = self.transform(batch_x)
-            batch_y = self.y[inds]
+            if isinstance(self.y, list):
+                batch_y = {'c1_predictions': self.y[0][inds], 'predictions': self.y[1][inds]}
+            else:
+                batch_y = self.y[inds]
             return batch_x, batch_y
 
         def on_epoch_end(self):

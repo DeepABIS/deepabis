@@ -102,7 +102,7 @@ weights_store_filepath = './models/'
 
 model_name = 'beenet_' + train_id + '.weights.best.hdf5'
 model_path = os.path.join(weights_store_filepath, model_name)
-if runs.current().model in ('mobilenet', 'mobilenetV2'):
+if runs.current().model in ('mobilenet', 'mobilenetV2', 'mobilenetV2_pretrained'):
     def relu6(x):
         return keras.backend.relu(x, max_value=6)
     with CustomObjectScope({'relu6': relu6}):
