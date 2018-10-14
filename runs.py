@@ -1,7 +1,7 @@
 import configparser
 from collections import namedtuple
 
-Run = namedtuple('Run', 'id dataset batch_size epochs mode class_weights lr_decay model branches optimizer')
+Run = namedtuple('Run', 'id dataset batch_size epochs mode class_weights lr_decay model branches optimizer input_shape')
 
 
 class Runs:
@@ -25,6 +25,7 @@ class Runs:
                 model = run['model']
                 branches = run.getboolean('branches')
                 optimizer = run['optimizer']
+                input_shape = tuple(map(int, run['input_shape'].split(',')))
                 self.runs[section] = Run(id=id,
                                          dataset=dataset,
                                          batch_size=batch_size,
@@ -34,7 +35,8 @@ class Runs:
                                          lr_decay=lr_decay,
                                          model=model,
                                          branches=branches,
-                                         optimizer=optimizer)
+                                         optimizer=optimizer,
+                                         input_shape=input_shape)
         if 'CURRENT' in config:
             self.run = config['CURRENT']['run']
 

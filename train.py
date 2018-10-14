@@ -37,7 +37,7 @@ class LossWeightsModifier(keras.callbacks.Callback):
             K.set_value(self.beta, 1)
 
 
-dataset = BeeDataSet(source_dir=runs.current().dataset, dataset_id=runs.current().id)
+dataset = BeeDataSet(source_dir=runs.current().dataset, dataset_id=runs.current().id, input_shape=runs.current().input_shape)
 dataset.load(mode=runs.current().mode)
 
 class_weight = []
@@ -61,7 +61,7 @@ epochs = runs.current().epochs
 # file paths
 weights_store_filepath = './models/'
 train_id = runs.current().id
-log_filepath = './logs/run' + train_id
+log_filepath = './logs/' + train_id
 model_name = 'beenet_' + train_id + '.h5'
 model_name_best = 'beenet_' + train_id + '.weights.best.hdf5'
 model_path = os.path.join(weights_store_filepath, model_name)
@@ -77,7 +77,7 @@ if runs.current().branches:
     cbks = [change_lr, tb_cb, change_lw]
     model.fit_generator(
         dataset.Generator(dataset.train['path'].values, [dataset.y_genus_train, dataset.y_species_train],
-                          dataset.scaler, batch_size=batch_size),
+                          dataset.scaler, input_shape=dataset.input_shape, batch_size=batch_size),
         class_weight=class_weight,
         steps_per_epoch=len(dataset.y_species_train) / batch_size,
         epochs=epochs,
@@ -87,7 +87,7 @@ if runs.current().branches:
 else:
     cbks = [change_lr, tb_cb, checkpoint]
     model.fit_generator(
-        dataset.Generator(dataset.train['path'].values, dataset.y_species_train, dataset.scaler, batch_size=batch_size),
+        dataset.Generator(dataset.train['path'].values, dataset.y_species_train, dataset.scaler, dataset.input_shape, batch_size=batch_size),
         class_weight=class_weight,
         steps_per_epoch=len(dataset.y_species_train) / batch_size,
         epochs=epochs,
@@ -95,10 +95,6 @@ else:
         callbacks=cbks,
         validation_data=(dataset.x_test, dataset.y_species_test))
 
-# ---------------------------------------------------------------------------------
-# The following compile() is just a behavior to make sure this model can be saved.
-# We thought it may be a bug of Keras which cannot save a model compiled with loss_weights parameter
-# ---------------------------------------------------------------------------------
 model.compile(loss='categorical_crossentropy',
               # optimizer=keras.optimizers.Adadelta(),
               optimizer=model.optimizer,

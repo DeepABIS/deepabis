@@ -9,11 +9,7 @@ import keras
 class BeeCNN:
     def __init__(self, num_genus, num_species, run):
         self.run = run
-        img_rows, img_cols = 224, 224
-        if K.image_data_format() == 'channels_first':
-            self.input_shape = (1, img_rows, img_cols)
-        else:
-            self.input_shape = (img_rows, img_cols, 3)
+        self.input_shape = run.input_shape
         self.num_c_1 = num_genus
         self.num_classes = num_species
         self.version = run.model
@@ -102,6 +98,7 @@ class BeeCNN:
         return model
 
     def oneloss(self):
+        # in parts taken from https://github.com/zhuxinqimac/B-CNN
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
@@ -152,6 +149,7 @@ class BeeCNN:
         return model
 
     def blocks4(self):
+        # in parts taken from https://github.com/zhuxinqimac/B-CNN
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
@@ -210,6 +208,7 @@ class BeeCNN:
         return model
 
     def baseline(self):
+        # in parts taken from https://github.com/zhuxinqimac/B-CNN
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
@@ -261,6 +260,7 @@ class BeeCNN:
         return model
 
     def baseline2(self):
+        # in parts taken from https://github.com/zhuxinqimac/B-CNN
         img_input = Input(shape=self.input_shape, name='input')
 
         # --- block 1 ---
@@ -322,6 +322,62 @@ class BeeCNN:
                       optimizer=self.optimizer(),
                       loss_weights=[self.alpha, self.beta],
                       # optimizer=keras.optimizers.Adadelta(),
+                      metrics=['accuracy', 'top_k_categorical_accuracy'])
+        return model
+
+    def baseline2_without_bts(self):
+        img_input = Input(shape=self.input_shape, name='input')
+
+        # --- block 1 ---
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv1')(img_input)
+        x = BatchNormalization()(x)
+        x = Conv2D(32, (3, 3), activation='relu', padding='same', name='block1_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block1_pool')(x)
+
+        # --- block 2 ---
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(64, (3, 3), activation='relu', padding='same', name='block2_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block2_pool')(x)
+
+        # --- block 3 ---
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(128, (3, 3), activation='relu', padding='same', name='block3_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block3_pool')(x)
+
+        # --- block 4 ---
+        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block4_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(256, (3, 3), activation='relu', padding='same', name='block4_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block4_pool')(x)
+
+        # --- block 5 ---
+        x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv1')(x)
+        x = BatchNormalization()(x)
+        x = Conv2D(512, (3, 3), activation='relu', padding='same', name='block5_conv2')(x)
+        x = BatchNormalization()(x)
+        x = MaxPooling2D((2, 2), strides=(2, 2), name='block5_pool')(x)
+
+        # --- fine block ---
+        x = Flatten(name='flatten')(x)
+        x = Dense(1024, activation='relu', name='fc_1')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        x = Dense(1024, activation='relu', name='fc2')(x)
+        x = BatchNormalization()(x)
+        x = Dropout(0.5)(x)
+        fine_pred = Dense(self.num_classes, activation='softmax', name='predictions')(x)
+
+        model = Model(inputs=img_input, outputs=fine_pred, name='beecnn')
+        model.summary()
+
+        model.compile(loss='categorical_crossentropy',
+                      optimizer=self.optimizer(),
                       metrics=['accuracy', 'top_k_categorical_accuracy'])
         return model
 

@@ -19,9 +19,10 @@ tqdm.pandas()
 
 
 class BeeDataSet:
-    def __init__(self, source_dir, dataset_id):
+    def __init__(self, source_dir, dataset_id, input_shape):
         self.source_dir = source_dir
         self.dataset_id = dataset_id
+        self.input_shape = input_shape
         self.df = None
         self.genus_names = []
         self.species_names = []
@@ -46,8 +47,8 @@ class BeeDataSet:
             species_embedding = self.embedding[genus]['species'][species]
         return genus_embedding, species_embedding
 
-    def load(self, mode = 'mean_subtraction', test_only = False):
-        mode_options = ('mean_subtraction', 'per_channel')
+    def load(self, mode='mean_subtraction', test_only=False):
+        mode_options = ('mean_subtraction', 'per_channel', 'none')
         if mode not in mode_options:
             raise ValueError('Mode has to be one of ' + str(mode_options))
         # Load embedding (genus/species --> index)
@@ -65,8 +66,8 @@ class BeeDataSet:
                 species_index = self.embedding[genus]['species'][species]
                 species_indices.append(species_index)
                 species_names.append(genus + ' ' + species)
-        genus_df = pd.DataFrame(data={'index':genus_indices}, index=genus_names)
-        species_df = pd.DataFrame(data={'index':species_indices}, index=species_names)
+        genus_df = pd.DataFrame(data={'index': genus_indices}, index=genus_names)
+        species_df = pd.DataFrame(data={'index': species_indices}, index=species_names)
 
         # Load number of files
         num_files = 0
@@ -96,8 +97,8 @@ class BeeDataSet:
         y_species = []
         types = []
 
-        self.x_train = np.zeros((num_train, 224, 224, 3))
-        self.x_test = np.zeros((num_test, 224, 224, 3))
+        self.x_train = np.zeros((num_train, *self.input_shape))
+        self.x_test = np.zeros((num_test, *self.input_shape))
         test_i = 0
 
         if not test_only:
@@ -122,10 +123,11 @@ class BeeDataSet:
                             with open(filename, 'rb') as stream:
                                 bytes = bytearray(stream.read())
                                 numpyarray = np.asarray(bytes, dtype=np.uint8)
-                                img = cv2.imdecode(numpyarray, cv2.IMREAD_COLOR)
-                                img = cv2.resize(img, (224, 224))
+                                img = cv2.imdecode(numpyarray, (
+                                    cv2.IMREAD_COLOR if self.input_shape[2] == 3 else cv2.IMREAD_GRAYSCALE))
+                                img = cv2.resize(img, self.input_shape[:2])
                                 img = np.float32(img)
-                                img = np.reshape(img, (224, 224, 3))
+                                img = np.reshape(img, self.input_shape)
                                 if type == 'train':
                                     self.scaler.partial_fit(img.reshape(-1, 1))
                                 if type == 'test':
@@ -133,6 +135,9 @@ class BeeDataSet:
                                     test_i += 1
                             pbar.update()
 
+        if mode == 'none':
+            self.scaler.mean_ = 0
+            self.scaler.scale_ = 1
         scaler_path = './transform/' + str(self.dataset_id) + '.pkl'
         if not test_only:
             print('Mean: {}'.format(self.scaler.mean_))
@@ -153,6 +158,7 @@ class BeeDataSet:
         self.num_species = species_df.shape[0]
         self.num_files = num_files
         self.genus_names = genus_df.index.values
+        self.genus_index = genus_df['index']
         self.species_names = species_df.index.values
         self.species_index = species_df['index']
         print('Extracting train data...')
@@ -169,7 +175,7 @@ class BeeDataSet:
     def transform_data(self, mode='mean_subtraction'):
         print('Normalizing data (' + mode + ')...')
         self.x_test = self.transform(self.x_test)
-        if mode != 'per_channel':
+        if mode == 'normalize':
             self.x_test /= 255
 
         print('To Categorical...')
@@ -186,31 +192,33 @@ class BeeDataSet:
 
     class Generator(Sequence):
         # Class is a dataset wrapper for better training performance
-        def __init__(self, x_set, y_set, scaler, batch_size=32):
+        def __init__(self, x_set, y_set, scaler, input_shape, batch_size=32):
             self.x, self.y = x_set, y_set
             self.scaler = scaler
+            self.input_shape = input_shape
             self.batch_size = batch_size
             self.indices = np.arange(self.x.shape[0])
-            #np.random.shuffle(self.indices)
+            # np.random.shuffle(self.indices)
 
         def __len__(self):
             return math.ceil(self.x.shape[0] / self.batch_size)
 
         def __getitem__(self, idx):
             inds = self.indices[idx * self.batch_size:(idx + 1) * self.batch_size]
-            batch_x = np.zeros((len(inds), 224, 224, 3))
+            batch_x = np.zeros((len(inds), *self.input_shape))
             i = 0
             for index in inds:
                 path = self.x[index]
                 with open(path, 'rb') as stream:
                     bytes = bytearray(stream.read())
                     numpyarray = np.asarray(bytes, dtype=np.uint8)
-                    img = cv2.imdecode(numpyarray, cv2.IMREAD_COLOR)
-                    img = cv2.resize(img, (224, 224))
+                    img = cv2.imdecode(numpyarray,
+                                       (cv2.IMREAD_COLOR if self.input_shape[2] == 3 else cv2.IMREAD_GRAYSCALE))
+                    img = cv2.resize(img, self.input_shape[:2])
                     img = np.float32(img)
-                    img = np.reshape(img, (224, 224, 3))
+                    img = np.reshape(img, self.input_shape)
                     batch_x[i] = img
-                    i+=1
+                    i += 1
 
             batch_x = self.transform(batch_x)
             if isinstance(self.y, list):
