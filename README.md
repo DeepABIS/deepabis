@@ -1,8 +1,3 @@
-<video width="100%" autoplay controls muted loop>
-  <source src="assets/vid/web.webm" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
-
 # Description
 DeepABIS is a convolutional neural network trained to classify
 bee species from images of wings.
