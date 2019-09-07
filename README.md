@@ -5,7 +5,7 @@ bee species from images of wings.
 # Installation
 ## Using Docker
 
-### Inference service
+### Inference service ([deepabis-inference](https://github.com/deepabis/deepabis-inference))
 The web version sends its classification requests to this service,
 which loads up the network model, performs inferences and sends
 the results back to the PHP client. So we need to install this 
@@ -31,7 +31,7 @@ docker run -p 9042:9042 --net deepabis-network --network-alias inference deepabi
 
 Now, our second cloud container (or native installation) will be able to reach the inference service.
 
-### Web version
+### Web version ([deepabis-cloud](https://github.com/deepabis/deepabis-cloud))
 
 1. For a quick start, the following command pulls the 
 web version as a Docker image:
@@ -48,7 +48,7 @@ This again creates a container on our custom network.
 The website can then be viewed on `localhost:8000`.
 
 ## Manually
-### Inference service
+### Inference service ([deepabis-inference](https://github.com/deepabis/deepabis-inference))
 
 0. Requirements:
 <ul>
@@ -72,7 +72,7 @@ python server.py
 
 4. The inference service now runs on port 9042.
 
-### Web version
+### Web version ([deepabis-cloud](https://github.com/deepabis/deepabis-cloud))
 
 0. Requirements:
 <ul>
@@ -112,7 +112,7 @@ both come with nginx to serve the site.
 
 8. Done!
 
-## Installing the mobile version
+## Installing the mobile version ([deepabis-mobile](https://github.com/deepabis/deepabis-mobile))
 
 0. Requirements:
 <ul>
