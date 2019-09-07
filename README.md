@@ -19,13 +19,12 @@ docker pull deepabis/deepabis:inference
 2. Create a bridge network. Both containers need to be in the same network
 to communicate with each other. By creating a user-defined network, we can
 use aliases for each container instead of using IP addresses.
-<br>
 ```bash
 docker network create deepabis-network
 ```
 
 3. Run the container with
- alias `inference` in our created network and expose port 9042: <br>
+ alias `inference` in our created network and expose port 9042:
 ```bash
 docker run -p 9042:9042 --net deepabis-network --network-alias inference deepabis/deepabis:inference
 ```
@@ -36,12 +35,11 @@ Now, our second cloud container (or native installation) will be able to reach t
 
 1. For a quick start, the following command pulls the 
 web version as a Docker image:
-<br>
 ```bash
 docker pull deepabis/deepabis-cloud
 ```
 
-2. Then, start a simple web server by running <br>
+2. Then, start a simple web server by running
 ```bash
 docker run -p 8000:8000 --net deepabis-network -e "INFERENCE_HOST=inference" deepabis/deepabis-cloud
 ``` 
@@ -57,17 +55,17 @@ The website can then be viewed on `localhost:8000`.
     <li>Python >= 3.5.2</li>
 </ul>
 
-1. Clone the inference repository: <br>
+1. Clone the inference repository:
 ```bash
 git clone https://github.com/deepabis/deepabis-inference && cd deepabis-inference
 ```
 
-2. Install the dependencies: <br>
+2. Install the dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the server: <br>
+3. Run the server:
 ```bash
 python server.py
 ```
@@ -85,12 +83,11 @@ python server.py
 </ul>
 
 1. Clone the web repository:
-<br>
 ```bash
 git clone https://github.com/deepabis/deepabis-cloud && cd deepabis-cloud
 ```
 
-2. Install PHP dependencies: <br>
+2. Install PHP dependencies:
 ```bash
 composer install
 ```
@@ -99,12 +96,12 @@ composer install
 
 4. In the `.env` file, set `INFERENCE_HOST` to `localhost`.
 
-5. Install JS dependencies: <br>
+5. Install JS dependencies:
 ```bash
 npm install
 ```
 
-6. Bundle JS source code: <br>
+6. Bundle JS source code:
 ```bash
 npm run production
 ```
@@ -122,7 +119,7 @@ both come with nginx to serve the site.
     <li> Android Studio</li>
 </ul>
 
-1. Clone the mobile repository:<br>
+1. Clone the mobile repository:
 ```bash
 git clone https://github.com/deepabis/deepabis-mobile
 ```
