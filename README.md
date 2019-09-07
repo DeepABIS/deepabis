@@ -1,4 +1,4 @@
-# Description
+# Deep Automated Bee Identification System
 DeepABIS is a convolutional neural network trained to classify
 bee species from images of wings.
 
