@@ -95,7 +95,7 @@ if not os.path.exists(reports_filepath):
     os.mkdir(reports_filepath)
 weights_store_filepath = './models/'
 
-model_name = 'beenet_' + train_id + ('.weights.best.hdf5' if not runs.current().branches else '.h5')
+model_name = 'deepabis_' + train_id + ('.weights.best.hdf5' if not runs.current().branches else '.h5')
 model_path = os.path.join(weights_store_filepath, model_name)
 if runs.current().model in ('mobilenet', 'mobilenetV2', 'mobilenetV2_pretrained'):
     def relu6(x):

@@ -2,7 +2,7 @@ from keras.callbacks import LearningRateScheduler, TensorBoard, ModelCheckpoint
 from sklearn.utils import compute_class_weight
 from runs import runs
 from dataset import BeeDataSet
-from model import BeeCNN
+from model import DeepABIS
 import keras
 from keras import backend as K
 import numpy as np
@@ -51,7 +51,7 @@ if runs.current().class_weights:
     else:
         class_weight = [class_weight_species]
 
-net = BeeCNN(dataset.num_genus, dataset.num_species, run=runs.current())
+net = DeepABIS(dataset.num_genus, dataset.num_species, run=runs.current())
 model = net.model()
 
 # hyperparameters
@@ -62,8 +62,8 @@ epochs = runs.current().epochs
 weights_store_filepath = './models/'
 train_id = runs.current().id
 log_filepath = './logs/' + train_id
-model_name = 'beenet_' + train_id + '.h5'
-model_name_best = 'beenet_' + train_id + '.weights.best.hdf5'
+model_name = 'deepabis_' + train_id + '.h5'
+model_name_best = 'deepabis_' + train_id + '.weights.best.hdf5'
 model_path = os.path.join(weights_store_filepath, model_name)
 model_path_best = os.path.join(weights_store_filepath, model_name_best)
 

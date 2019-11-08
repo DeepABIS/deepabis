@@ -6,7 +6,7 @@ from keras import optimizers
 import keras
 
 
-class BeeCNN:
+class DeepABIS:
     def __init__(self, num_genus, num_species, run):
         self.run = run
         self.input_shape = run.input_shape
