@@ -111,12 +111,6 @@ dataset.load(mode=runs.current().mode, test_only=True)
 
 y_genus_test = np.argmax(dataset.y_genus_test, axis=1)
 
-if train_id == '1':
-    # Run 1 had one class too many (because 'embeddings.json' was interpreted as a class)
-    y_genus_test_9 = np.zeros((dataset.y_genus_test.shape[0],9))
-    y_genus_test_9[:,:-1] = dataset.y_genus_test
-    y_genus_test = np.argmax(y_genus_test_9, axis=1)
-
 if runs.current().branches:
     y_genus_pred, y_species_pred = model.predict(dataset.x_test, verbose=1)
     y_genus_pred = np.argmax(y_genus_pred, axis=1)
